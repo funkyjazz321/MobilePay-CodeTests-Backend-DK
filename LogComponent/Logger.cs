@@ -8,68 +8,65 @@
 
     public class Logger : ILogger
     {
-        private Thread _runThread;
-        private List<LogLine> _lines = new List<LogLine>();
+        private Thread runThread;
+        private List<LogLine> lines = new List<LogLine>();
 
-        private StreamWriter _writer; 
+        private StreamWriter writer; 
 
-        private bool _exit;
+        private bool exit;
+        private bool quitWithFlush = false;
+        DateTime curDate = DateTime.Now;
 
         public Logger()
         {
             if (!Directory.Exists(@"C:\LogTest")) 
                 Directory.CreateDirectory(@"C:\LogTest");
 
-            this._writer = File.AppendText(@"C:\LogTest\Log" + DateTime.Now.ToString("yyyyMMdd HHmmss fff") + ".log");
+            writer = File.AppendText(@"C:\LogTest\Log" + DateTime.Now.ToString("yyyyMMdd HHmmss fff") + ".log");
             
-            this._writer.Write("Timestamp".PadRight(25, ' ') + "\t" + "Data".PadRight(15, ' ') + "\t" + Environment.NewLine);
+            writer.Write("Timestamp".PadRight(25, ' ') + "\t" + "Data".PadRight(15, ' ') + "\t" + Environment.NewLine);
 
-            this._writer.AutoFlush = true;
+            writer.AutoFlush = true;
 
-            this._runThread = new Thread(this.MainLoop);
-            this._runThread.Start();
+            runThread = new Thread(MainLoop);
+            runThread.Start();
         }
-
-        private bool _QuitWithFlush = false;
-
-
-        DateTime _curDate = DateTime.Now;
 
         private void MainLoop()
         {
-            while (!this._exit)
+            while (!exit)
             {
-                if (this._lines.Count > 0)
+                if (lines.Count > 0)
                 {
                     int f = 0;
                     List<LogLine> _handled = new List<LogLine>();
 
-                    foreach (LogLine logLine in this._lines)
+                    foreach (LogLine logLine in lines)
                     {
                         f++;
 
                         if (f > 5)
                             continue;
                         
-                        if (!this._exit || this._QuitWithFlush)
+                        if (!exit || quitWithFlush)
                         {
                             _handled.Add(logLine);
 
                             StringBuilder stringBuilder = new StringBuilder();
 
-                            if ((DateTime.Now - _curDate).Days != 0)
+                            if ((DateTime.Now - curDate).Days != 0)
                             {
-                                _curDate = DateTime.Now;
+                                curDate = DateTime.Now;
 
-                                this._writer = File.AppendText(@"C:\LogTest\Log" + DateTime.Now.ToString("yyyyMMdd HHmmss fff") + ".log");
+                                writer = File.AppendText(@"C:\LogTest\Log" + DateTime.Now.ToString("yyyyMMdd HHmmss fff") + ".log");
 
-                                this._writer.Write("Timestamp".PadRight(25, ' ') + "\t" + "Data".PadRight(15, ' ') + "\t" + Environment.NewLine);
+                                writer.Write("Timestamp".PadRight(25, ' ') + "\t" + "Data".PadRight(15, ' ') + "\t" + Environment.NewLine);
 
                                 stringBuilder.Append(Environment.NewLine);
 
-                                this._writer.Write(stringBuilder.ToString());
+                                writer.Write(stringBuilder.ToString());
 
-                                this._writer.AutoFlush = true;
+                                writer.AutoFlush = true;
                             }
 
                             stringBuilder.Append(logLine.Timestamp.ToString("yyyy-MM-dd HH:mm:ss:fff"));
@@ -79,17 +76,17 @@
 
                             stringBuilder.Append(Environment.NewLine);
 
-                            this._writer.Write(stringBuilder.ToString());
+                            writer.Write(stringBuilder.ToString());
                         }
                     }
 
                     for (int y = 0; y < _handled.Count; y++)
                     {
-                        this._lines.Remove(_handled[y]);   
+                        lines.Remove(_handled[y]);   
                     }
 
-                    if (this._QuitWithFlush == true && this._lines.Count == 0) 
-                        this._exit = true;
+                    if (quitWithFlush == true && lines.Count == 0) 
+                        exit = true;
 
                     Thread.Sleep(50);
                 }
@@ -100,7 +97,7 @@
         {
             await Task.Run(() =>
             {
-                this._exit = true;
+                exit = true;
             });
         }
 
@@ -108,7 +105,7 @@
         {
             await Task.Run(() =>
             {
-                this._QuitWithFlush = true;
+                quitWithFlush = true;
             });
         }
 
@@ -116,7 +113,7 @@
         {
             await Task.Run(() =>
             {
-                this._lines.Add(new LogLine() { Text = s, Timestamp = DateTime.Now });
+                lines.Add(new LogLine() { Text = s, Timestamp = DateTime.Now });
             });
         }
     }
