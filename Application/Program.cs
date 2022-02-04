@@ -1,23 +1,23 @@
 ﻿using LogTest;
 
-LogInterface logger = new AsyncLogInterface();
+ILogger logger = new Logger();
 
 for (int i = 0; i < 15; i++)
 {
-    logger.WriteLog("Number with Flush: " + i.ToString());
+    await logger.WriteLogAsync("Number with Flush: " + i.ToString());
     Thread.Sleep(50);
 }
 
-logger.Stop_With_Flush();
+await logger.StopWithFlushAsync();
 
-LogInterface logger2 = new AsyncLogInterface();
+ILogger logger2 = new Logger();
 
 for (int i = 50; i > 0; i--)
 {
-    logger2.WriteLog("Number with No flush: " + i.ToString());
+    await logger2.WriteLogAsync("Number with No flush: " + i.ToString());
     Thread.Sleep(20);
 }
 
-logger2.Stop_Without_Flush();
+await logger2.StopWithoutFlushAsync();
 
 Console.ReadLine();

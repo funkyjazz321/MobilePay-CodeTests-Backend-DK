@@ -6,7 +6,7 @@
     using System.Text;
     using System.Threading;
 
-    public class AsyncLogInterface : LogInterface
+    public class Logger : ILogger
     {
         private Thread _runThread;
         private List<LogLine> _lines = new List<LogLine>();
@@ -15,7 +15,7 @@
 
         private bool _exit;
 
-        public AsyncLogInterface()
+        public Logger()
         {
             if (!Directory.Exists(@"C:\LogTest")) 
                 Directory.CreateDirectory(@"C:\LogTest");
@@ -96,19 +96,28 @@
             }
         }
 
-        public void Stop_Without_Flush()
+        public async Task StopWithoutFlushAsync()
         {
-            this._exit = true;
+            await Task.Run(() =>
+            {
+                this._exit = true;
+            });
         }
 
-        public void Stop_With_Flush()
+        public async Task StopWithFlushAsync()
         {
-            this._QuitWithFlush = true;
+            await Task.Run(() =>
+            {
+                this._QuitWithFlush = true;
+            });
         }
 
-        public void WriteLog(string s)
+        public async Task WriteLogAsync(string s)
         {
-            this._lines.Add(new LogLine() { Text = s, Timestamp = DateTime.Now });
+            await Task.Run(() =>
+            {
+                this._lines.Add(new LogLine() { Text = s, Timestamp = DateTime.Now });
+            });
         }
     }
 }
