@@ -1,4 +1,4 @@
-﻿namespace LogTest
+﻿namespace LogComponent
 {
     using System;
     using System.Collections.Generic;
@@ -8,113 +8,55 @@
 
     public class Logger : ILogger
     {
-        private Thread runThread;
-        private List<LogLine> lines = new List<LogLine>();
+        private IStreamWriterWrapper writer;
+        private DateTime currentDate;
 
-        private StreamWriter writer; 
-
-        private bool exit;
-        private bool quitWithFlush = false;
-        DateTime curDate = DateTime.Now;
-
-        public Logger()
+        public Logger(IStreamWriterWrapper writer, DateTime currentDate)
         {
-            if (!Directory.Exists(@"C:\LogTest")) 
-                Directory.CreateDirectory(@"C:\LogTest");
+            this.writer = writer;
+            this.currentDate = currentDate;
 
-            writer = File.AppendText(@"C:\LogTest\Log" + DateTime.Now.ToString("yyyyMMdd HHmmss fff") + ".log");
-            
-            writer.Write("Timestamp".PadRight(25, ' ') + "\t" + "Data".PadRight(15, ' ') + "\t" + Environment.NewLine);
-
-            writer.AutoFlush = true;
-
-            runThread = new Thread(MainLoop);
-            runThread.Start();
+            if (!Directory.Exists(@"C:\Logs"))
+                Directory.CreateDirectory(@"C:\Logs");
         }
 
-        private void MainLoop()
+        public DateTime CurrentDate { get { return currentDate; } }
+
+        public async Task<List<string?>> GetLinesInCurrentFile()
         {
-            while (!exit)
+            return await Task.Run(() =>
             {
-                if (lines.Count > 0)
-                {
-                    int f = 0;
-                    List<LogLine> _handled = new List<LogLine>();
-
-                    foreach (LogLine logLine in lines)
-                    {
-                        f++;
-
-                        if (f > 5)
-                            continue;
-                        
-                        if (!exit || quitWithFlush)
-                        {
-                            _handled.Add(logLine);
-
-                            StringBuilder stringBuilder = new StringBuilder();
-
-                            if ((DateTime.Now - curDate).Days != 0)
-                            {
-                                curDate = DateTime.Now;
-
-                                writer = File.AppendText(@"C:\LogTest\Log" + DateTime.Now.ToString("yyyyMMdd HHmmss fff") + ".log");
-
-                                writer.Write("Timestamp".PadRight(25, ' ') + "\t" + "Data".PadRight(15, ' ') + "\t" + Environment.NewLine);
-
-                                stringBuilder.Append(Environment.NewLine);
-
-                                writer.Write(stringBuilder.ToString());
-
-                                writer.AutoFlush = true;
-                            }
-
-                            stringBuilder.Append(logLine.Timestamp.ToString("yyyy-MM-dd HH:mm:ss:fff"));
-                            stringBuilder.Append("\t");
-                            stringBuilder.Append(logLine.LineText());
-                            stringBuilder.Append("\t");
-
-                            stringBuilder.Append(Environment.NewLine);
-
-                            writer.Write(stringBuilder.ToString());
-                        }
-                    }
-
-                    for (int y = 0; y < _handled.Count; y++)
-                    {
-                        lines.Remove(_handled[y]);   
-                    }
-
-                    if (quitWithFlush == true && lines.Count == 0) 
-                        exit = true;
-
-                    Thread.Sleep(50);
-                }
-            }
+                return writer.LinesInCurrentFile;
+            });
         }
 
         public async Task StopWithoutFlushAsync()
         {
-            await Task.Run(() =>
-            {
-                exit = true;
-            });
+            writer.AutoFlush = false;
+            await writer.CloseAsync();
         }
 
         public async Task StopWithFlushAsync()
         {
-            await Task.Run(() =>
-            {
-                quitWithFlush = true;
-            });
+            await writer.FlushAsync();
         }
 
-        public async Task WriteLogAsync(string s)
+        public async Task WriteLogAsync(string message, DateTime logTime)
         {
             await Task.Run(() =>
             {
-                lines.Add(new LogLine() { Text = s, Timestamp = DateTime.Now });
+                if(logTime.Date > currentDate.Date)
+                {
+                    currentDate = logTime;
+                    writer.StartNewFileAsync(logTime);
+                }
+                writer.WriteAsync(FormatLogEntry(message, logTime));
             });
+        }
+
+        private string FormatLogEntry(string message, DateTime logTime)
+        {
+            return $"{logTime:yyyy-MM-dd HH:mm:ss:fff} {message}{Environment.NewLine}";
         }
     }
 }

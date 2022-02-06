@@ -1,7 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-
-namespace LogTest
+﻿namespace LogComponent
 {
     public interface ILogger
     {
@@ -18,7 +15,8 @@ namespace LogTest
         /// <summary>
         /// WriteLog a message to the Log.
         /// </summary>
-        /// <param name="s">The s to written to the log</param>
-        Task WriteLogAsync(string s);
+        /// <param name="message">The message to written to the log</param>
+        /// <param name="logTime">The timing of the event to be written to the log</param>
+        Task WriteLogAsync(string message, DateTime logTime);
     }
 }
